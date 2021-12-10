@@ -100,11 +100,6 @@ public class LockPatternUtils {
      */
     public static final int MIN_LOCK_PASSWORD_SIZE = 4;
 
-    /*
-     * The default size of the pattern lockscreen. Ex: 3x3
-     */
-    public static final byte PATTERN_SIZE_DEFAULT = 3;
-
     /**
      * The minimum number of dots the user must include in a wrong pattern attempt for it to be
      * counted.
@@ -402,6 +397,7 @@ public class LockPatternUtils {
     @NonNull
     public VerifyCredentialResponse verifyCredential(@NonNull LockscreenCredential credential,
             int userId, @VerifyFlag int flags) {
+        throwIfCalledOnMainThread();
         try {
             final VerifyCredentialResponse response = getLockSettings().verifyCredential(
                     credential, userId, flags);
@@ -459,6 +455,7 @@ public class LockPatternUtils {
     public boolean checkCredential(@NonNull LockscreenCredential credential, int userId,
             @Nullable CheckCredentialProgressCallback progressCallback)
             throws RequestThrottledException {
+        throwIfCalledOnMainThread();
         try {
             VerifyCredentialResponse response = getLockSettings().checkCredential(
                     credential, userId, wrapCallback(progressCallback));
@@ -492,6 +489,7 @@ public class LockPatternUtils {
     @NonNull
     public VerifyCredentialResponse verifyTiedProfileChallenge(
             @NonNull LockscreenCredential credential, int userId, @VerifyFlag int flags) {
+        throwIfCalledOnMainThread();
         try {
             final VerifyCredentialResponse response = getLockSettings()
                     .verifyTiedProfileChallenge(credential, userId, flags);
@@ -877,18 +875,16 @@ public class LockPatternUtils {
      * @param  bytes The pattern serialized with {@link #patternToByteArray}
      * @return The pattern.
      */
-    public static List<LockPatternView.Cell> byteArrayToPattern(byte[] bytes, byte gridSize) {
+    public static List<LockPatternView.Cell> byteArrayToPattern(byte[] bytes) {
         if (bytes == null) {
             return null;
         }
 
         List<LockPatternView.Cell> result = Lists.newArrayList();
 
-        LockPatternView.Cell.updateSize(gridSize);
-
         for (int i = 0; i < bytes.length; i++) {
             byte b = (byte) (bytes[i] - '1');
-            result.add(LockPatternView.Cell.of(b / gridSize, b % gridSize, gridSize));
+            result.add(LockPatternView.Cell.of(b / 3, b % 3));
         }
         return result;
     }
@@ -898,7 +894,7 @@ public class LockPatternUtils {
      * @param pattern The pattern.
      * @return The pattern in byte array form.
      */
-    public static byte[] patternToByteArray(List<LockPatternView.Cell> pattern, byte gridSize) {
+    public static byte[] patternToByteArray(List<LockPatternView.Cell> pattern) {
         if (pattern == null) {
             return new byte[0];
         }
@@ -907,7 +903,7 @@ public class LockPatternUtils {
         byte[] res = new byte[patternSize];
         for (int i = 0; i < patternSize; i++) {
             LockPatternView.Cell cell = pattern.get(i);
-            res[i] = (byte) (cell.getRow() * gridSize + cell.getColumn() + '1');
+            res[i] = (byte) (cell.getRow() * 3 + cell.getColumn() + '1');
         }
         return res;
     }
@@ -939,40 +935,6 @@ public class LockPatternUtils {
             Log.e(TAG, "failed to get credential type", re);
             return CREDENTIAL_TYPE_NONE;
         }
-    }
-
-    /**
-     * @return the pattern lockscreen size
-     */
-    public byte getLockPatternSize(int userId) {
-        long size = getLong(Settings.Secure.LOCK_PATTERN_SIZE, -1, userId);
-        if (size > 0 && size < 128) {
-            return (byte) size;
-        }
-        return LockPatternUtils.PATTERN_SIZE_DEFAULT;
-    }
-
-    /**
-     * Set the pattern lockscreen size
-     */
-    public void setLockPatternSize(long size, int userId) {
-        setLong(Settings.Secure.LOCK_PATTERN_SIZE, size, userId);
-    }
-
-    public void setVisibleDotsEnabled(boolean enabled, int userId) {
-        setBoolean(Settings.Secure.LOCK_DOTS_VISIBLE, enabled, userId);
-    }
-
-    public boolean isVisibleDotsEnabled(int userId) {
-        return getBoolean(Settings.Secure.LOCK_DOTS_VISIBLE, true, userId);
-    }
-
-    public void setShowErrorPath(boolean enabled, int userId) {
-        setBoolean(Settings.Secure.LOCK_SHOW_ERROR_PATH, enabled, userId);
-    }
-
-    public boolean isShowErrorPath(int userId) {
-        return getBoolean(Settings.Secure.LOCK_SHOW_ERROR_PATH, true, userId);
     }
 
     /**
@@ -1257,6 +1219,12 @@ public class LockPatternUtils {
         if (isDeviceEncryptionEnabled()){
             Settings.Global.putInt(mContext.getContentResolver(),
                Settings.Global.REQUIRE_PASSWORD_TO_DECRYPT, required ? 1 : 0);
+        }
+    }
+
+    private void throwIfCalledOnMainThread() {
+        if (Looper.getMainLooper().isCurrentThread()) {
+            throw new IllegalStateException("should not be called from the main thread.");
         }
     }
 

@@ -121,8 +121,7 @@ public class KeyguardPatternViewController
             mLatencyTracker.onActionStart(ACTION_CHECK_CREDENTIAL_UNLOCKED);
             mPendingLockCheck = LockPatternChecker.checkCredential(
                     mLockPatternUtils,
-                    LockscreenCredential.createPattern(pattern,
-                            mLockPatternUtils.getLockPatternSize(userId)),
+                    LockscreenCredential.createPattern(pattern),
                     userId,
                     new LockPatternChecker.OnCheckCallback() {
 
@@ -215,7 +214,6 @@ public class KeyguardPatternViewController
     @Override
     protected void onViewAttached() {
         super.onViewAttached();
-        int userId = KeyguardUpdateMonitor.getCurrentUser();
         mLockPatternView.setOnPatternListener(new UnlockPatternListener());
         mLockPatternView.setSaveEnabled(false);
         mLockPatternView.setInStealthMode(!mLockPatternUtils.isVisiblePatternEnabled(
@@ -228,13 +226,6 @@ public class KeyguardPatternViewController
             }
             return false;
         });
-
-        mLockPatternView.setLockPatternUtils(mLockPatternUtils);
-        mLockPatternView.setLockPatternSize(mLockPatternUtils.getLockPatternSize(userId));
-
-        mLockPatternView.setVisibleDots(mLockPatternUtils.isVisibleDotsEnabled(userId));
-        mLockPatternView.setShowErrorPath(mLockPatternUtils.isShowErrorPath(userId));
-
         mEmergencyButtonController.setEmergencyButtonCallback(mEmergencyButtonCallback);
 
         View cancelBtn = mView.findViewById(R.id.cancel_button);

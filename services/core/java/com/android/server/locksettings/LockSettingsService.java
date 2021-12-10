@@ -1539,10 +1539,6 @@ public class LockSettingsService extends ILockSettings.Stub {
                 && getSeparateProfileChallengeEnabledInternal(userId);
     }
 
-    public byte getLockPatternSize(int userId) {
-        return mStorage.getLockPatternSize(userId);
-    }
-
     /**
      * Send credentials for user {@code userId} to {@link RecoverableKeyStoreManager} during an
      * unlock operation.
@@ -2416,10 +2412,10 @@ public class LockSettingsService extends ILockSettings.Stub {
         });
     }
 
-    private LockscreenCredential createPattern(String patternString, byte patternSize) {
+    private LockscreenCredential createPattern(String patternString) {
         final byte[] patternBytes = patternString.getBytes();
         LockscreenCredential pattern = LockscreenCredential.createPattern(
-                LockPatternUtils.byteArrayToPattern(patternBytes, patternSize), patternSize);
+                LockPatternUtils.byteArrayToPattern(patternBytes));
         Arrays.fill(patternBytes, (byte) 0);
         return pattern;
     }
@@ -2462,7 +2458,7 @@ public class LockSettingsService extends ILockSettings.Stub {
             final LockscreenCredential credential;
             switch (getCredentialTypeInternal(userId)) {
                 case CREDENTIAL_TYPE_PATTERN:
-                    credential = createPattern(password, mStorage.getLockPatternSize(userId));
+                    credential = createPattern(password);
                     break;
                 case CREDENTIAL_TYPE_PIN:
                     credential = LockscreenCredential.createPin(password);
@@ -2708,10 +2704,7 @@ public class LockSettingsService extends ILockSettings.Stub {
             Secure.LOCK_PATTERN_ENABLED,
             Secure.LOCK_BIOMETRIC_WEAK_FLAGS,
             Secure.LOCK_PATTERN_VISIBLE,
-            Secure.LOCK_PATTERN_TACTILE_FEEDBACK_ENABLED,
-            Secure.LOCK_PATTERN_SIZE,
-            Secure.LOCK_DOTS_VISIBLE,
-            Secure.LOCK_SHOW_ERROR_PATH
+            Secure.LOCK_PATTERN_TACTILE_FEEDBACK_ENABLED
     };
 
     // Reading these settings needs the contacts permission

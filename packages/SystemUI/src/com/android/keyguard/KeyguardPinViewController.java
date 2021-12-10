@@ -16,36 +16,17 @@
 
 package com.android.keyguard;
 
-import static com.android.keyguard.KeyguardAbsKeyInputView.MINIMUM_PASSWORD_LENGTH_BEFORE_REPORT;
-
-import android.os.UserHandle;
-import android.provider.Settings;
 import android.view.View;
-import android.widget.LinearLayout;
 
 import com.android.internal.util.LatencyTracker;
 import com.android.internal.widget.LockPatternUtils;
-import com.android.internal.widget.LockPatternUtils.RequestThrottledException;
-import com.android.internal.widget.LockscreenCredential;
-import com.android.keyguard.PasswordTextView.QuickUnlockListener;
 import com.android.keyguard.KeyguardSecurityModel.SecurityMode;
 import com.android.systemui.R;
 import com.android.systemui.classifier.FalsingCollector;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 public class KeyguardPinViewController
         extends KeyguardPinBasedInputViewController<KeyguardPINView> {
     private final KeyguardUpdateMonitor mKeyguardUpdateMonitor;
-
-    private int userId = KeyguardUpdateMonitor.getCurrentUser();
-
-    private LockPatternUtils mLockPatternUtils;
-
-    private static List<Integer> sNumbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 0);
 
     protected KeyguardPinViewController(KeyguardPINView view,
             KeyguardUpdateMonitor keyguardUpdateMonitor,
@@ -59,7 +40,6 @@ public class KeyguardPinViewController
                 messageAreaControllerFactory, latencyTracker, liftToActivateListener,
                 emergencyButtonController, falsingCollector);
         mKeyguardUpdateMonitor = keyguardUpdateMonitor;
-        mLockPatternUtils = lockPatternUtils;
     }
 
     @Override
@@ -72,47 +52,6 @@ public class KeyguardPinViewController
                 getKeyguardSecurityCallback().reset();
                 getKeyguardSecurityCallback().onCancelClicked();
             });
-        }
-
-        boolean scramblePin = (Settings.System.getIntForUser(getContext().getContentResolver(),
-                Settings.System.LOCKSCREEN_PIN_SCRAMBLE_LAYOUT, 0, UserHandle.USER_CURRENT) == 1);
-
-        if (scramblePin) {
-            Collections.shuffle(sNumbers);
-            // get all children who are NumPadKey's
-            LinearLayout container = (LinearLayout) mView.findViewById(R.id.pin_container);
-
-            List<NumPadKey> views = new ArrayList<NumPadKey>();
-            for (int i = 0; i < container.getChildCount(); i++) {
-                if (container.getChildAt(i) instanceof LinearLayout) {
-                    LinearLayout nestedLayout = ((LinearLayout) container.getChildAt(i));
-                    for (int j = 0; j < nestedLayout.getChildCount(); j++){
-                        View view = nestedLayout.getChildAt(j);
-                        if (view.getClass() == NumPadKey.class) {
-                            views.add((NumPadKey) view);
-                        }
-                    }
-                }
-            }
-
-            // reset the digits in the views
-            for (int i = 0; i < sNumbers.size(); i++) {
-                NumPadKey view = views.get(i);
-                view.setDigit(sNumbers.get(i));
-            }
-        }
-
-        boolean quickUnlock = (Settings.System.getIntForUser(getContext().getContentResolver(),
-                Settings.System.LOCKSCREEN_QUICK_UNLOCK_CONTROL, 1, UserHandle.USER_CURRENT) == 1);
-
-        if (quickUnlock) {
-            mPasswordEntry.setQuickUnlockListener(new QuickUnlockListener() {
-                public void onValidateQuickUnlock(String password) {
-                    validateQuickUnlock(password);
-                }
-            });
-        } else {
-            mPasswordEntry.setQuickUnlockListener(null);
         }
     }
 
@@ -132,26 +71,5 @@ public class KeyguardPinViewController
     public boolean startDisappearAnimation(Runnable finishRunnable) {
         return mView.startDisappearAnimation(
                 mKeyguardUpdateMonitor.needsSlowUnlockTransition(), finishRunnable);
-    }
-
-    private void validateQuickUnlock(String password) {
-        if (password != null) {
-            if (password.length() > MINIMUM_PASSWORD_LENGTH_BEFORE_REPORT
-                    && kpvCheckPassword(password)) {
-                mPasswordEntry.setEnabled(false);
-                getKeyguardSecurityCallback().reportUnlockAttempt(userId, true, 0);
-                getKeyguardSecurityCallback().dismiss(true, userId);
-                mView.resetPasswordText(true, true);
-            }
-        }
-    }
-
-    private boolean kpvCheckPassword(String password) {
-        try {
-            return mLockPatternUtils.checkCredential(
-                    LockscreenCredential.createPinOrNone(password), userId, null);
-        } catch (RequestThrottledException ex) {
-            return false;
-        }
     }
 }
