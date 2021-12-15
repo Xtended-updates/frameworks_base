@@ -1248,7 +1248,7 @@ public class NotificationStackScrollLayoutController {
                 continue;
             }
             final ExpandableNotificationRow row = (ExpandableNotificationRow) child;
-            if (row.getEntry().isClearable() && NotificationStackScrollLayout.matchesSelection(row, selection)) {
+            if (row.canViewBeDismissed() && NotificationStackScrollLayout.matchesSelection(row, selection)) {
                 return row;
             }
         }
